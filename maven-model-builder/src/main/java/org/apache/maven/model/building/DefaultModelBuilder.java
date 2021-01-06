@@ -1320,7 +1320,8 @@ public class DefaultModelBuilder
                 }
 
                 // Validate versions aren't inherited when using parent ranges the same way as when read externally.
-                if ( childModel.getVersion() == null )
+                String rawChildModelVersion = childModel.getVersion();
+                if ( rawChildModelVersion == null )
                 {
                     // Message below is checked for in the MNG-2199 core IT.
                     problems.add( new ModelProblemCollectorRequest( Severity.FATAL, Version.V31 )
@@ -1329,7 +1330,7 @@ public class DefaultModelBuilder
                 }
                 else
                 {
-                    if ( childModel.getVersion().contains( "${" ) )
+                    if ( rawChildVersionReferencesParent( rawChildModelVersion ) )
                     {
                         // Message below is checked for in the MNG-2199 core IT.
                         problems.add( new ModelProblemCollectorRequest( Severity.FATAL, Version.V31 )
@@ -1358,6 +1359,12 @@ public class DefaultModelBuilder
          */
 
         return new ModelData( candidateSource, candidateModel, groupId, artifactId, version );
+    }
+
+    private boolean rawChildVersionReferencesParent( String rawChildModelVersion )
+    {
+        return rawChildModelVersion.equals( "${project.version}" ) 
+                || rawChildModelVersion.equals( "${project.parent.version}" );
     }
 
     private ModelSource getParentPomFile( Model childModel, Source source )
@@ -1441,7 +1448,9 @@ public class DefaultModelBuilder
 
         if ( !parent.getVersion().equals( version ) )
         {
-            if ( childModel.getVersion() == null )
+            String rawChildModelVersion = childModel.getVersion();
+            
+            if ( rawChildModelVersion == null )
             {
                 // Message below is checked for in the MNG-2199 core IT.
                 problems.add( new ModelProblemCollectorRequest( Severity.FATAL, Version.V31 )
@@ -1450,7 +1459,7 @@ public class DefaultModelBuilder
             }
             else
             {
-                if ( childModel.getVersion().contains( "${" ) )
+                if ( rawChildVersionReferencesParent( rawChildModelVersion )  )
                 {
                     // Message below is checked for in the MNG-2199 core IT.
                     problems.add( new ModelProblemCollectorRequest( Severity.FATAL, Version.V31 )
@@ -1777,11 +1786,11 @@ public class DefaultModelBuilder
                 = new ConcurrentHashMap<>( 64 );
 
         /**
-         * If an interface could be extracted, DefaultModelProblemCollector should be ModelProblemCollectorExt
+         * If an interface could be extracted, DefaultModelProblemCollector should be ModelProblemCollectorExt.
          *
-         * @param request
-         * @param collector
-         * @return
+         * @param request the request
+         * @param collector the collector
+         * @return the transformer context
          */
         @Override
         public TransformerContext initialize( ModelBuildingRequest request, ModelProblemCollector collector )
